@@ -12,6 +12,7 @@ def getAll(root, node):
     return [_.text for _ in root.iterfind('.//'+node, namespaces=root.nsmap)]
 
 # Calculates the groundspeed given two lat/long coordinates and associated start/end datetimes.
+# TODO: Account for altitude differences.
 def calcSpeed(fm, to, start, end):
     dx = math.hypot(*[b - a for a, b in zip(fm, to)]) * 60.0 # nautical miles
     dt = (end - start).total_seconds() / 3600.0 # hours
@@ -19,6 +20,16 @@ def calcSpeed(fm, to, start, end):
 
 # Converts a kml tracklog exported from flightaware.com to G1000 csv format.
 def export(kml):
+
+    # Skip if already exported
+    base = os.path.splitext(kml)[0]
+    fileName = base + '.csv'
+    if os.path.exists(fileName):
+        return
+
+    print('Exporting ' + fileName)
+    
+    # G1000 header, format, and trailing commas for data we do not set.
     hdr = '  Lcl Date, Lcl Time, UTCOfst, AtvWpt,     Latitude,    Longitude,    AltB, BaroA,  AltMSL,   OAT,    IAS, GndSpd,    VSpd,  Pitch,   Roll,  LatAc, NormAc,   HDG,   TRK, volt1,  FQtyL,  FQtyR, E1 FFlow, E1 FPres, E1 OilT, E1 OilP, E1 MAP, E1 RPM, E1 CHT1, E1 CHT2, E1 CHT3, E1 CHT4, E1 EGT1, E1 EGT2, E1 EGT3, E1 EGT4,  AltGPS, TAS, HSIS,    CRS,   NAV1,   NAV2,    COM1,    COM2,   HCDI,   VCDI, WndSpd, WndDr, WptDst, WptBrg, MagVar, AfcsOn, RollM, PitchM, RollC, PichC, VSpdG, GPSfix,  HAL,   VAL, HPLwas, HPLfd, VPLwas'
     fmt = '{date}, {time},   00:00,       , {lat: >12}, {lng: >12},        ,      , {alt: >7},      ,       , {gspd: >6}'
     tail = ',        ,       ,       ,       ,       ,      ,      ,      ,       ,       ,         ,         ,        ,        ,       ,       ,        ,        ,        ,        ,        ,        ,        ,        ,        ,    ,     ,       ,       ,       ,        ,        ,       ,       ,       ,      ,       ,       ,       ,       ,      ,       ,      ,      ,      ,       ,     ,      ,       ,      ,       '
@@ -52,16 +63,17 @@ def export(kml):
         fm = to
         start = end
         
+        # FlightAware KLM altitude is in meters, while G1000 wants feet.
+        alt = round(float(alt) * 3.28084)
+        
         # Append data with trailing commas for unset values.
         csv.append(fmt.format(date=date, time=time, lat=lat, lng=lng, alt=alt, gspd=gspd) + tail)
 
     # Write file to disk.
-    base = os.path.splitext(kml)[0]
-    with open(base + '.csv', 'w') as f:
+    with open(fileName, 'w') as f:
         f.writelines('\n'.join(csv))
 
 # Convert all files in source directory.    
 files = glob.glob(os.path.join(srcDir, '*.kml'))
 for fileName in files:
-    print('Exporting ' + fileName)
     export(fileName)
