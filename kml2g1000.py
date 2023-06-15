@@ -4,8 +4,8 @@ import math
 from datetime import datetime
 from lxml import etree as ET
 
-# Download path for FlightAware KML files.
-srcDir = r'C:\Users\<User Name>\Downloads'
+# Setting the source directory to the absolute path of the current directory
+srcDir = os.path.abspath(os.path.dirname(__file__))
 
 # Returns an array containing the texts of all the specified child nodes of root.
 def getAll(root, node):
